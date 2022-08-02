@@ -1,9 +1,13 @@
 package core.mvc.tobe;
 
 import core.db.DataBase;
+import java.lang.reflect.InvocationTargetException;
 import next.model.User;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -42,5 +46,18 @@ public class AnnotationHandlerMappingTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         HandlerExecution execution = handlerMapping.getHandler(request);
         execution.handle(request, response);
+    }
+
+    @DisplayName("dsfasdf")
+    @ParameterizedTest
+    @ValueSource(strings = {"POST", "GET"})
+    void asdfasfd(String method) throws InvocationTargetException, IllegalAccessException {
+        MockHttpServletRequest request = new MockHttpServletRequest(method, "/user");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        HandlerExecution execution = handlerMapping.getHandler(request);
+        execution.handle(request, response);
+
+        assertThat(request.getAttribute("user")).isEqualTo("any");
+
     }
 }

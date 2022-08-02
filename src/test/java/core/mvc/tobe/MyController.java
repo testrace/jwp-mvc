@@ -36,4 +36,10 @@ public class MyController {
         DataBase.addUser(user);
         return null;
     }
+
+    @RequestMapping(value = "/user")
+    public ModelAndView user(HttpServletRequest request, HttpServletResponse response) {
+        request.setAttribute("user", "any");
+        return null;
+    }
 }
