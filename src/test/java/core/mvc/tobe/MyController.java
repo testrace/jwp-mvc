@@ -37,9 +37,10 @@ public class MyController {
         return null;
     }
 
-    @RequestMapping(value = "/user")
-    public ModelAndView user(HttpServletRequest request, HttpServletResponse response) {
-        request.setAttribute("user", "any");
-        return null;
+    @RequestMapping(value = "/allMethod")
+    public ModelAndView allowAllMethods(HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView modelAndView = new ModelAndView();
+        modelAndView.addObject("method", "allAllow");
+        return modelAndView;
     }
 }

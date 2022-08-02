@@ -7,7 +7,7 @@ import com.google.common.collect.Maps;
 import core.annotation.web.Controller;
 import core.annotation.web.RequestMapping;
 import core.annotation.web.RequestMethod;
-import java.lang.reflect.Field;
+import core.mvc.tobe.exception.InvalidInstanceException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -18,16 +18,12 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import org.reflections.ReflectionUtils;
 import org.reflections.Reflections;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class AnnotationHandlerMapping {
 
-    private static final Logger logger = LoggerFactory.getLogger(AnnotationHandlerMapping.class);
+    private final Object[] basePackage;
 
-    private Object[] basePackage;
-
-    private Map<HandlerKey, HandlerExecution> handlerExecutions = Maps.newHashMap();
+    private static final Map<HandlerKey, HandlerExecution> HANDLER_EXECUTIONS = Maps.newHashMap();
 
     public AnnotationHandlerMapping(Object... basePackage) {
         this.basePackage = basePackage;
@@ -47,44 +43,52 @@ public class AnnotationHandlerMapping {
         final Object handler = getHandlerInstance(controller);
 
         for (final Method method : methods) {
-            final List<HandlerKey> handlerKeys = createHandlerKey(method);
+            final List<HandlerKey> handlerKeys = createHandlerKeys(method);
             final HandlerExecution handlerExecution = new HandlerExecution(handler, method);
             mappingHandler(handlerKeys, handlerExecution);
         }
     }
 
-    private void mappingHandler(final List<HandlerKey> handlerKeys, final HandlerExecution handlerExecution) {
-        for (final HandlerKey handlerKey : handlerKeys) {
-            handlerExecutions.put(handlerKey, handlerExecution);
-        }
-    }
-
-    private static List<HandlerKey> createHandlerKey(final Method method) {
+    private static List<HandlerKey> createHandlerKeys(final Method method) {
         final RequestMapping requestMapping = method.getAnnotation(RequestMapping.class);
 
-        final String value = requestMapping.value();
+        final RequestMethod[] requestMethods = requestMapping.method();
+        final String url = requestMapping.value();
 
-        final RequestMethod requestMethod = requestMapping.method();
-        if (requestMethod == null) {
-            return Arrays.stream(RequestMethod.values())
-                .map(it -> new HandlerKey(requestMapping.value(), it))
-                .collect(Collectors.toList());
+        if (notExistsMethods(requestMethods)) {
+            return createHandlerKeys(url, RequestMethod.values());
         }
 
-        return List.of(new HandlerKey(requestMapping.value(), requestMethod));
+        return createHandlerKeys(url, requestMethods);
+    }
+
+    private static boolean notExistsMethods(final RequestMethod[] requestMethods) {
+        return requestMethods.length == 0;
+    }
+
+    private static List<HandlerKey> createHandlerKeys(final String url, final RequestMethod[] requestMethods) {
+        return Arrays.stream(requestMethods)
+            .map(requestMethod -> new HandlerKey(url, requestMethod))
+            .collect(Collectors.toList());
+    }
+
+    private void mappingHandler(final List<HandlerKey> handlerKeys, final HandlerExecution handlerExecution) {
+        for (final HandlerKey handlerKey : handlerKeys) {
+            HANDLER_EXECUTIONS.put(handlerKey, handlerExecution);
+        }
     }
 
     private static Object getHandlerInstance(final Class<?> controller) {
         try {
             return controller.getConstructor().newInstance();
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            throw new RuntimeException(e);
+            throw new InvalidInstanceException(e);
         }
     }
 
     public HandlerExecution getHandler(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
         RequestMethod rm = RequestMethod.valueOf(request.getMethod().toUpperCase());
-        return handlerExecutions.get(new HandlerKey(requestUri, rm));
+        return HANDLER_EXECUTIONS.get(new HandlerKey(requestUri, rm));
     }
 }

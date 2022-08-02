@@ -1,19 +1,21 @@
 package core.mvc.tobe;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import core.annotation.web.RequestMethod;
 import core.db.DataBase;
-import java.lang.reflect.InvocationTargetException;
+import core.mvc.ModelAndView;
 import next.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-import static org.assertj.core.api.Assertions.assertThat;
+class AnnotationHandlerMappingTest {
 
-public class AnnotationHandlerMappingTest {
     private AnnotationHandlerMapping handlerMapping;
 
     @BeforeEach
@@ -23,7 +25,7 @@ public class AnnotationHandlerMappingTest {
     }
 
     @Test
-    public void create_find() throws Exception {
+    void create_find() throws Exception {
         User user = new User("pobi", "password", "포비", "pobi@nextstep.camp");
         createUser(user);
         assertThat(DataBase.findUserById(user.getUserId())).isEqualTo(user);
@@ -48,16 +50,18 @@ public class AnnotationHandlerMappingTest {
         execution.handle(request, response);
     }
 
-    @DisplayName("dsfasdf")
+    @DisplayName("RequestMapping에 method가 지정되어 있지 않으면 모든 method를 처리한다.")
     @ParameterizedTest
-    @ValueSource(strings = {"POST", "GET"})
-    void asdfasfd(String method) throws InvocationTargetException, IllegalAccessException {
-        MockHttpServletRequest request = new MockHttpServletRequest(method, "/user");
+    @EnumSource(RequestMethod.class)
+    void all_http_method(RequestMethod method) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(method.name(), "/allMethod");
         MockHttpServletResponse response = new MockHttpServletResponse();
-        HandlerExecution execution = handlerMapping.getHandler(request);
-        execution.handle(request, response);
 
-        assertThat(request.getAttribute("user")).isEqualTo("any");
+        HandlerExecution execution = handlerMapping.getHandler(request);
+
+        ModelAndView modelAndView = execution.handle(request, response);
+
+        assertThat(modelAndView.getObject("method")).isEqualTo("allAllow");
 
     }
 }
